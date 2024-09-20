@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>c9248f82-d9db-4da2-b50c-f27e82d4aede</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..\..</DockerfileContext>
+  </PropertyGroup>
+
+	<ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+  </ItemGroup>
+	<Target Name="CopyAppSettings" BeforeTargets="Build;Publish">
+		<Copy SourceFiles="..\appsettings.json" DestinationFolder="$(OutputPath)" />
+		<Copy SourceFiles="..\appsettings.json" DestinationFolder="$(PublishDir)" />
+		<Copy SourceFiles="..\appsettings.Development.json" DestinationFolder="$(OutputPath)" />
+		<Copy SourceFiles="..\appsettings.Development.json" DestinationFolder="$(PublishDir)" />
+		<Copy SourceFiles="..\appsettings.Homolog.json" DestinationFolder="$(OutputPath)" />
+		<Copy SourceFiles="..\appsettings.Homolog.json" DestinationFolder="$(PublishDir)" />
+	</Target>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Pix\Api.Pix\Api.Pix.csproj" />
+    <ProjectReference Include="..\..\CrossCutting\Modules.PayHub.CrossCutting.DependencyInjection\Modules.PayHub.CrossCutting.DependencyInjection.csproj" />
+  </ItemGroup>
+
+</Project>

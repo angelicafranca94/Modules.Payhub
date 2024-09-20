@@ -1,0 +1,6 @@
+@Webhook.PayHub_HostAddress = http://localhost:5078
+
+GET {{Webhook.PayHub_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

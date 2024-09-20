@@ -1,0 +1,319 @@
+variables:
+  DEPLOY_PATH: "~/deploy_tmp/${CI_PROJECT_NAME}" #sem "/" no final
+  
+stages:
+  - build
+  - deploy
+
+.build_template:
+  stage: build
+  script:
+    - "docker build -f $DOCKERFILE_PATH -t $IMAGE_NAME ."
+    - "docker save -o $IMAGE_PATH $IMAGE_NAME"
+    - "docker rmi $IMAGE_NAME"
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - "$IMAGE_PATH"
+    expire_in: 1 hour
+  only:
+    - homolog
+    - main
+  when: manual
+
+
+build_fiap_itau_webhook:
+  extends: .build_template
+  variables:
+    IMAGE_NAME: fiap-modulespayhub-itau-webhook:latest
+    IMAGE_PATH: fiap-modulespayhub-itau-webhook.tar
+    DOCKERFILE_PATH: ./src/Services/Webhooks/Webhook.PayHub/Dockerfile
+
+build_fiap_pix_itau_api:
+  extends: .build_template
+  variables:
+    IMAGE_NAME: fiap-modulespayhub-pix-itau-api:latest
+    IMAGE_PATH: fiap-modulespayhub-pix-itau-api.tar
+    DOCKERFILE_PATH: ./src/Services/Api.Service/Dockerfile
+
+build_fiap_consumer:
+  extends: .build_template
+  variables:
+    IMAGE_NAME: fiap-modulespayhub-consumer:latest
+    IMAGE_PATH: fiap-modulespayhub-consumer.tar
+    DOCKERFILE_PATH: ./src/Services/Consumers/Dockerfile
+
+
+build_modulo_itau_webhook:
+  extends: .build_template
+  variables:
+    IMAGE_NAME: modulo-modulespayhub-itau-webhook:latest
+    IMAGE_PATH: modulo-modulespayhub-itau-webhook.tar
+    DOCKERFILE_PATH: ./src/Services/Webhooks/Webhook.PayHub/Dockerfile
+
+build_modulo_pix_itau_api:
+  extends: .build_template
+  variables:
+    IMAGE_NAME: modulo-modulespayhub-pix-itau-api:latest
+    IMAGE_PATH: modulo-modulespayhub-pix-itau-api.tar
+    DOCKERFILE_PATH: ./src/Services/Api.Service/Dockerfile
+
+build_modulo_consumer:
+  extends: .build_template
+  variables:
+    IMAGE_NAME: modulo-modulespayhub-consumer:latest
+    IMAGE_PATH: modulo-modulespayhub-consumer.tar
+    DOCKERFILE_PATH: ./src/Services/Consumers/Dockerfile
+
+
+.deploy_template:
+  stage: deploy
+  variables:
+    SSH_COMMAND: "ssh -i chave.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST"
+    SCP_COMMAND: "scp -i chave.pem -o StrictHostKeyChecking=no"
+  before_script:
+    - echo "$SSH_PRIVATE_KEY" > chave.pem
+    - chmod 600 chave.pem
+    - $SSH_COMMAND "mkdir -p $DEPLOY_PATH/"
+    - $SCP_COMMAND $IMAGE_FILENAME $SSH_USER@$SSH_HOST:$DEPLOY_PATH/$IMAGE_FILENAME
+  script:
+    - $SSH_COMMAND "docker stop $CONTAINER_NAME || true"
+    - $SSH_COMMAND "docker rm $CONTAINER_NAME || true"
+    - $SSH_COMMAND "docker rmi $IMAGE_NAME || true"
+    - $SSH_COMMAND "docker load < $DEPLOY_PATH/$IMAGE_FILENAME"
+    - $SSH_COMMAND "$DOCKER_RUN"
+  after_script:
+    - $SSH_COMMAND "rm -rf $DEPLOY_PATH/$IMAGE_FILENAME"
+    - rm chave.pem
+  tags:
+    - docker
+  when: manual
+
+deploy_fiap_homo_pix_itau_api:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $FIAP_HOMO_SSH_PRIVATE_KEY
+    SSH_USER: $FIAP_HOMO_SSH_USER
+    SSH_HOST: $FIAP_HOMO_SSH_HOST
+    CONTAINER_NAME: fiap-modulespayhub-pix-itau-api
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: fiap-modulespayhub-pix-itau-api.tar
+    IMAGE_NAME: fiap-modulespayhub-pix-itau-api:latest
+    DOCKER_RUN: "docker run -d -v modulespayhub-volume:/path/in/container --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Homolog -e DB_SERVER=$FIAP_HOMO_DB_SERVER -e DB_USER=$FIAP_HOMO_DB_USER -e DB_PASS='$FIAP_HOMO_DB_PASS' -e RABBIT_USER=$FIAP_HOMO_RABBIT_USER -e RABBIT_PASS=$FIAP_HOMO_RABBIT_PASS -e RABBIT_VHOST=$FIAP_HOMO_RABBIT_VHOST -p 4041:8080 $IMAGE_NAME"
+  only:
+    - homolog
+  environment:
+    name: homolog
+  needs:
+    - build_fiap_pix_itau_api
+
+
+deploy_fiap_homo_itau_webhook:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $FIAP_HOMO_SSH_PRIVATE_KEY
+    SSH_USER: $FIAP_HOMO_SSH_USER
+    SSH_HOST: $FIAP_HOMO_SSH_HOST
+    CONTAINER_NAME: fiap-modulespayhub-itau-webhook
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: fiap-modulespayhub-itau-webhook.tar
+    IMAGE_NAME: fiap-modulespayhub-itau-webhook:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Homolog -e DB_SERVER=$FIAP_HOMO_DB_SERVER -e DB_USER=$FIAP_HOMO_DB_USER -e DB_PASS='$FIAP_HOMO_DB_PASS' -e RABBIT_USER=$FIAP_HOMO_RABBIT_USER -e RABBIT_PASS=$FIAP_HOMO_RABBIT_PASS -e RABBIT_VHOST=$FIAP_HOMO_RABBIT_VHOST -p 4042:8080 $IMAGE_NAME"
+  only:
+    - homolog
+  environment:
+    name: homolog
+  needs:
+    - build_fiap_itau_webhook
+
+
+deploy_fiap_homo_consumer:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $FIAP_HOMO_SSH_PRIVATE_KEY
+    SSH_USER: $FIAP_HOMO_SSH_USER
+    SSH_HOST: $FIAP_HOMO_SSH_HOST
+    CONTAINER_NAME: fiap-modulespayhub-consumer
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: fiap-modulespayhub-consumer.tar
+    IMAGE_NAME: fiap-modulespayhub-consumer:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_ENVIRONMENT=Homolog -e DB_SERVER=$FIAP_HOMO_DB_SERVER -e DB_USER=$FIAP_HOMO_DB_USER -e DB_PASS='$FIAP_HOMO_DB_PASS' -e RABBIT_USER=$FIAP_HOMO_RABBIT_USER -e RABBIT_PASS=$FIAP_HOMO_RABBIT_PASS -e RABBIT_VHOST=$FIAP_HOMO_RABBIT_VHOST $IMAGE_NAME"
+  only:
+    - homolog
+  environment:
+    name: homolog
+  needs:
+    - build_fiap_consumer
+
+
+deploy_modulo_homo_pix_itau_api:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $MODULO_HOMO_SSH_PRIVATE_KEY
+    SSH_USER: $MODULO_HOMO_SSH_USER
+    SSH_HOST: $MODULO_HOMO_SSH_HOST
+    CONTAINER_NAME: modulo-modulespayhub-pix-itau-api
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: modulo-modulespayhub-pix-itau-api.tar
+    IMAGE_NAME: modulo-modulespayhub-pix-itau-api:latest
+    DOCKER_RUN: "docker run -d -v modulespayhub-volume:/path/in/container --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Homolog -e DB_SERVER=$MODULO_HOMO_DB_SERVER -e DB_USER=$MODULO_HOMO_DB_USER -e DB_PASS='$MODULO_HOMO_DB_PASS' -e RABBIT_USER=$MODULO_HOMO_RABBIT_USER -e RABBIT_PASS=$MODULO_HOMO_RABBIT_PASS -e RABBIT_VHOST=$MODULO_HOMO_RABBIT_VHOST -p 4043:8080 $IMAGE_NAME"
+  only:
+    - homolog
+  environment:
+    name: homolog
+  needs:
+    - build_modulo_pix_itau_api
+
+
+deploy_modulo_homo_itau_webhook:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $MODULO_HOMO_SSH_PRIVATE_KEY
+    SSH_USER: $MODULO_HOMO_SSH_USER
+    SSH_HOST: $MODULO_HOMO_SSH_HOST
+    CONTAINER_NAME: modulo-modulespayhub-itau-webhook
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: modulo-modulespayhub-itau-webhook.tar
+    IMAGE_NAME: modulo-modulespayhub-itau-webhook:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Homolog -e DB_SERVER=$MODULO_HOMO_DB_SERVER -e DB_USER=$MODULO_HOMO_DB_USER -e DB_PASS='$MODULO_HOMO_DB_PASS' -e RABBIT_USER=$MODULO_HOMO_RABBIT_USER -e RABBIT_PASS=$MODULO_HOMO_RABBIT_PASS -e RABBIT_VHOST=$MODULO_HOMO_RABBIT_VHOST -p 4044:8080 $IMAGE_NAME"
+  only:
+    - homolog
+  environment:
+    name: homolog
+  needs:
+    - build_modulo_itau_webhook
+
+
+deploy_modulo_homo_consumer:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $MODULO_HOMO_SSH_PRIVATE_KEY
+    SSH_USER: $MODULO_HOMO_SSH_USER
+    SSH_HOST: $MODULO_HOMO_SSH_HOST
+    CONTAINER_NAME: modulo-modulespayhub-consumer
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: modulo-modulespayhub-consumer.tar
+    IMAGE_NAME: modulo-modulespayhub-consumer:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_ENVIRONMENT=Homolog -e DB_SERVER=$MODULO_HOMO_DB_SERVER -e DB_USER=$MODULO_HOMO_DB_USER -e DB_PASS='$MODULO_HOMO_DB_PASS' -e RABBIT_USER=$MODULO_HOMO_RABBIT_USER -e RABBIT_PASS=$MODULO_HOMO_RABBIT_PASS -e RABBIT_VHOST=$MODULO_HOMO_RABBIT_VHOST $IMAGE_NAME"
+  only:
+    - homolog
+  environment:
+    name: homolog
+  needs:
+    - build_modulo_consumer
+
+
+
+deploy_fiap_prod_pix_itau_api:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $FIAP_PROD_SSH_PRIVATE_KEY
+    SSH_USER: $FIAP_PROD_SSH_USER
+    SSH_HOST: $FIAP_PROD_SSH_HOST
+    CONTAINER_NAME: fiap-modulespayhub-pix-itau-api
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: fiap-modulespayhub-pix-itau-api.tar
+    IMAGE_NAME: fiap-modulespayhub-pix-itau-api:latest
+    DOCKER_RUN: "docker run -d -v modulespayhub-volume:/path/in/container --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Production -e DB_SERVER=$FIAP_PROD_DB_SERVER -e DB_USER=$FIAP_PROD_DB_USER -e DB_PASS='$FIAP_PROD_DB_PASS' -e RABBIT_USER=$FIAP_PROD_RABBIT_USER -e RABBIT_PASS=$FIAP_PROD_RABBIT_PASS -e RABBIT_VHOST=$FIAP_PROD_RABBIT_VHOST -p 4041:8080 $IMAGE_NAME"
+  only:
+    - main
+  environment:
+    name: prod
+  needs:
+    - build_fiap_pix_itau_api
+
+
+deploy_fiap_prod_itau_webhook:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $FIAP_PROD_SSH_PRIVATE_KEY
+    SSH_USER: $FIAP_PROD_SSH_USER
+    SSH_HOST: $FIAP_PROD_SSH_HOST
+    CONTAINER_NAME: fiap-modulespayhub-itau-webhook
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: fiap-modulespayhub-itau-webhook.tar
+    IMAGE_NAME: fiap-modulespayhub-itau-webhook:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Production -e DB_SERVER=$FIAP_PROD_DB_SERVER -e DB_USER=$FIAP_PROD_DB_USER -e DB_PASS='$FIAP_PROD_DB_PASS' -e RABBIT_USER=$FIAP_PROD_RABBIT_USER -e RABBIT_PASS=$FIAP_PROD_RABBIT_PASS -e RABBIT_VHOST=$FIAP_PROD_RABBIT_VHOST -p 4042:8080 $IMAGE_NAME"
+  only:
+    - main
+  environment:
+    name: prod
+  needs:
+    - build_fiap_itau_webhook
+
+
+deploy_fiap_prod_consumer:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $FIAP_PROD_SSH_PRIVATE_KEY
+    SSH_USER: $FIAP_PROD_SSH_USER
+    SSH_HOST: $FIAP_PROD_SSH_HOST
+    CONTAINER_NAME: fiap-modulespayhub-consumer
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: fiap-modulespayhub-consumer.tar
+    IMAGE_NAME: fiap-modulespayhub-consumer:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_ENVIRONMENT=Production -e DB_SERVER=$FIAP_PROD_DB_SERVER -e DB_USER=$FIAP_PROD_DB_USER -e DB_PASS='$FIAP_PROD_DB_PASS' -e RABBIT_USER=$FIAP_PROD_RABBIT_USER -e RABBIT_PASS=$FIAP_PROD_RABBIT_PASS -e RABBIT_VHOST=$FIAP_PROD_RABBIT_VHOST $IMAGE_NAME"
+  only:
+    - main
+  environment:
+    name: prod
+  needs:
+    - build_fiap_consumer
+
+
+deploy_modulo_prod_pix_itau_api:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $MODULO_PROD_SSH_PRIVATE_KEY
+    SSH_USER: $MODULO_PROD_SSH_USER
+    SSH_HOST: $MODULO_PROD_SSH_HOST
+    CONTAINER_NAME: modulo-modulespayhub-pix-itau-api
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: modulo-modulespayhub-pix-itau-api.tar
+    IMAGE_NAME: modulo-modulespayhub-pix-itau-api:latest
+    DOCKER_RUN: "docker run -d -v modulespayhub-volume:/path/in/container --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Production -e DB_SERVER=$MODULO_PROD_DB_SERVER -e DB_USER=$MODULO_PROD_DB_USER -e DB_PASS='$MODULO_PROD_DB_PASS' -e RABBIT_USER=$MODULO_PROD_RABBIT_USER -e RABBIT_PASS=$MODULO_PROD_RABBIT_PASS -e RABBIT_VHOST=$MODULO_PROD_RABBIT_VHOST -p 4043:8080 $IMAGE_NAME"
+  only:
+    - main
+  environment:
+    name: prod
+  needs:
+    - build_modulo_pix_itau_api
+
+
+deploy_modulo_prod_itau_webhook:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $MODULO_PROD_SSH_PRIVATE_KEY
+    SSH_USER: $MODULO_PROD_SSH_USER
+    SSH_HOST: $MODULO_PROD_SSH_HOST
+    CONTAINER_NAME: modulo-modulespayhub-itau-webhook
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: modulo-modulespayhub-itau-webhook.tar
+    IMAGE_NAME: modulo-modulespayhub-itau-webhook:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_URLS=http://*:8080 -e ASPNETCORE_ENVIRONMENT=Production -e DB_SERVER=$MODULO_PROD_DB_SERVER -e DB_USER=$MODULO_PROD_DB_USER -e DB_PASS='$MODULO_PROD_DB_PASS' -e RABBIT_USER=$MODULO_PROD_RABBIT_USER -e RABBIT_PASS=$MODULO_PROD_RABBIT_PASS -e RABBIT_VHOST=$MODULO_PROD_RABBIT_VHOST -p 4044:8080 $IMAGE_NAME"
+  only:
+    - main
+  environment:
+    name: prod
+  needs:
+    - build_modulo_itau_webhook
+
+
+deploy_modulo_prod_consumer:
+  extends: .deploy_template
+  variables:
+    SSH_PRIVATE_KEY: $MODULO_PROD_SSH_PRIVATE_KEY
+    SSH_USER: $MODULO_PROD_SSH_USER
+    SSH_HOST: $MODULO_PROD_SSH_HOST
+    CONTAINER_NAME: modulo-modulespayhub-consumer
+    DEPLOY_PATH: $CONTAINER_NAME
+    IMAGE_FILENAME: modulo-modulespayhub-consumer.tar
+    IMAGE_NAME: modulo-modulespayhub-consumer:latest
+    DOCKER_RUN: "docker run -d --name $CONTAINER_NAME --restart always -e ASPNETCORE_ENVIRONMENT=Production -e DB_SERVER=$MODULO_PROD_DB_SERVER -e DB_USER=$MODULO_PROD_DB_USER -e DB_PASS='$MODULO_PROD_DB_PASS' -e RABBIT_USER=$MODULO_PROD_RABBIT_USER -e RABBIT_PASS=$MODULO_PROD_RABBIT_PASS -e RABBIT_VHOST=$MODULO_PROD_RABBIT_VHOST $IMAGE_NAME"
+  only:
+    - main
+  environment:
+    name: prod
+  needs:
+    - build_modulo_consumer

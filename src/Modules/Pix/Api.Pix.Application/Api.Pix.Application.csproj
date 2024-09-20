@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Dtos\AmountDto.cs" />
+    <Compile Remove="Dtos\CalendarDto.cs" />
+    <Compile Remove="Dtos\ComponentsAmountDto.cs" />
+    <Compile Remove="Dtos\DebtorDto.cs" />
+    <Compile Remove="Dtos\LocDto.cs" />
+    <Compile Remove="Dtos\OriginalDto.cs" />
+    <Compile Remove="Dtos\PixGetDto.cs" />
+    <Compile Remove="Dtos\RefundsDto.cs" />
+    <Compile Remove="Dtos\TimestampDto.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="12.0.1" />
+    <PackageReference Include="MassTransit" Version="8.2.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.2.0" />
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.19.0.84025">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Api.Pix.Domain\Api.Pix.Domain.csproj" />
+    <ProjectReference Include="..\..\..\CrossCutting\CrossCutting.PayHub.Shared\CrossCutting.PayHub.Shared.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,65 @@
+services:
+  rabbitmq-container:
+    image: rabbitmq:3.11.9-management-alpine
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=lalala
+      - RABBITMQ_DEFAULT_VHOST=vhost
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      
+  application:
+    ports:
+      - 5265:8080 
+    environment:
+       - ASPNETCORE_ENVIRONMENT=Homolog
+       - DB_SERVER=192.168.12.2\FPHOMO
+       - DB_USER=sa
+       - DB_PASS=!pfgm@07
+    build:
+      context: .
+      dockerfile: ./src/Services/Api.Service/Dockerfile
+    volumes:
+      - volume:/path/in/container/filespayhub
+      
+  webhook:
+    ports:
+      - 5266:8080 
+    environment:
+       - ASPNETCORE_ENVIRONMENT=Homolog
+       - DB_SERVER=192.168.12.2\FPHOMO
+       - DB_USER=sa
+       - DB_PASS=!pfgm@07
+       - RABBIT_USER=payhub
+       - RABBIT_PASS=payhub
+       - RABBIT_VHOST=payhub
+    build:
+      context: .
+      dockerfile: ./src/Services/Webhooks/Webhook.PayHub/Dockerfile
+    depends_on:
+      - rabbitmq-container
+      
+  consumers:
+    environment:
+       - ASPNETCORE_ENVIRONMENT=Homolog
+       - DB_SERVER=192.168.12.2\FPHOMO
+       - DB_USER=sa
+       - DB_PASS=!pfgm@07
+       - RABBIT_USER=payhub
+       - RABBIT_PASS=payhub
+       - RABBIT_VHOST=payhub
+    build:
+      context: .
+      dockerfile: ./src/Services/Consumers/Dockerfile
+    depends_on:
+      - rabbitmq-container
+
+volumes:
+  volume:
+    driver: local
