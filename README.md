@@ -1,6 +1,6 @@
 # Modules.PayHub
 
-O projeto Modules.PayHub, concebido entre 2023/2024, foi idealizado em um momento em que a célula .NET da Fiap identificou a necessidade de centralizar sistemas que possuem o mesmo contexto com a ideia de reduzir o grande número de aplicações de mesmo contexto que possuímos hoje em nosso repositório. O contexto da aplicação Modules.Payhub é meios de pagamento: uma aplicação que centraliza as lógicas de conciliação de todos os meios de pagamento que a FIAP/Modulo possui.  
+O projeto Modules.PayHub, concebido entre 2023/2024, foi idealizado em um momento em que a célula .NET da   identificou a necessidade de centralizar sistemas que possuem o mesmo contexto com a ideia de reduzir o grande número de aplicações de mesmo contexto que possuímos hoje em nosso repositório. O contexto da aplicação Modules.Payhub é meios de pagamento: uma aplicação que centraliza as lógicas de conciliação de todos os meios de pagamento que a  /Modulo possui.  
 
 
 ## Arquitetura 
@@ -9,7 +9,7 @@ A arquitetura do projeto **Modules.PayHub** pode ser definida como Monolito Modu
 
 O conceito de monolito modular combina aspectos do desenvolvimento monolítico e de microsserviços. Ele permite que uma aplicação monolítica seja gradualmente decomposta em módulos independentes e interconectados, sem a necessidade de uma reescrita completa do código. 
 
-Aplicando-se ao Modules.PayHub, cada módulo, representa um contexto da aplicação como: Pix, Boleto, Pagamento Recorrente, Cartão e qualquer outro contexto de meio de pagamento que a FIAP possa querer implementar futuramente. Ou seja, futuras features que tenha relação com esse contexto, deve ser analisado a possibilidade de implementação nesse projeto.  
+Aplicando-se ao Modules.PayHub, cada módulo, representa um contexto da aplicação como: Pix, Boleto, Pagamento Recorrente, Cartão e qualquer outro contexto de meio de pagamento que a   possa querer implementar futuramente. Ou seja, futuras features que tenha relação com esse contexto, deve ser analisado a possibilidade de implementação nesse projeto.  
 
 Além dos módulos que se aplicam ao contexto do sistema, o Modules.PayHub também pode ser dividido em 3 partes e cada uma dessas partes nós chamamos de serviço: 
 
@@ -17,7 +17,7 @@ Além dos módulos que se aplicam ao contexto do sistema, o Modules.PayHub tamb�
 
 **Consumer**: parte do sistema responsável pelo processamento de filas de sistemas de mensagerias (atualmente usamos o RabbitMQ) 
 
-**Jobs**: parte do sistema responsável pelo monitoramento dos jobs dos bancos da FIAP que tem relação com as formas de pagamento. Atualmente, somente os boleto possuem processos relacionados a jobs. 
+**Jobs**: parte do sistema responsável pelo monitoramento dos jobs dos bancos da   que tem relação com as formas de pagamento. Atualmente, somente os boleto possuem processos relacionados a jobs. 
 
 
 ## Pastas 
@@ -47,17 +47,6 @@ Para rodar e testar o projeto na sua máquina, são necessários alguns itens:
 - [ ] Certificados do itaú em uma pasta na sua máquina para enviar no header das requisições
 - [ ] Docker e Docker for Desktop - caso queira testar o projeto publicado no docker
 
-## Tabelas Envolvidas 
 
-- PixStatusProcessamento
-- PixControle
-- FNContaCorrente 
-- PixControleLogError
-- WebhookItauBolecodePix 
-- WebhookItauBolecodePixComponentesValor 
-- WebhookItauBolecodePixDevolucoes 
-- WebhookItauBolecodePixLogError
-- FnDebitos
-
-Para mais detalhes de configuração do projeto, acesse: http://conhecimento.fiap.com.br/tabelas/financeiro/ModulesPayhub/
+Para mais detalhes de configuração do projeto, acesse: http://conhecimento. .com.br/tabelas/financeiro/ModulesPayhub/
 
