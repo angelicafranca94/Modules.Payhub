@@ -47,6 +47,3 @@ Para rodar e testar o projeto na sua máquina, são necessários alguns itens:
 - [ ] Certificados do itaú em uma pasta na sua máquina para enviar no header das requisições
 - [ ] Docker e Docker for Desktop - caso queira testar o projeto publicado no docker
 
-
-Para mais detalhes de configuração do projeto, acesse: http://conhecimento. .com.br/tabelas/financeiro/ModulesPayhub/
-
